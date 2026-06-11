@@ -1,7 +1,7 @@
 {
   "name": "cccodex",
   "owner": {
-    "name": "foxy"
+    "name": "foxytanuki"
   },
   "metadata": {
     "description": "Marketplace for the codex Claude Code plugin (soft routing to Codex CLI).",
@@ -14,7 +14,7 @@
       "description": "Soft routing from Claude Code to Codex CLI for implementation, exploration, research, and deep review.",
       "version": "0.2.0",
       "author": {
-        "name": "foxy"
+        "name": "foxytanuki"
       },
       "category": "development",
       "license": "MIT"

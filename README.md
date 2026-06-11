@@ -9,7 +9,7 @@ A Claude Code plugin that keeps Claude as the interface, orchestrator, and revie
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-d97757)](https://docs.anthropic.com/en/docs/claude-code/plugins)
 [![Codex CLI](https://img.shields.io/badge/Codex%20CLI-0.136.0-10a37f)](https://developers.openai.com/codex/cli/)
-[![Benchmark](https://img.shields.io/badge/benchmark-6%2F6%20PASS-brightgreen)](docs/BENCHMARK.md)
+[![Benchmark](https://img.shields.io/badge/benchmark-30%2F30%20PASS-brightgreen)](docs/BENCHMARK.md)
 
 </div>
 
@@ -102,16 +102,16 @@ use codex:oracle to judge whether this migration is safe to ship
 
 ## How it compares to openai/codex-plugin-cc
 
-OpenAI ships an official plugin for the same pairing: [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc). We benchmarked the two head-to-head on identical fixture tasks, pinned to the same model/effort/tier (`gpt-5.5`, medium, fast) — full methodology, numbers, and caveats in **[docs/BENCHMARK.md](docs/BENCHMARK.md)**.
+OpenAI ships an official plugin for the same pairing: [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc). We benchmarked the two head-to-head — 5 trials per task per plugin on identical fixture tasks, pinned to the same model/effort/tier (`gpt-5.5`, medium, fast) — full methodology, numbers, and caveats in **[docs/BENCHMARK.md](docs/BENCHMARK.md)**.
 
-| Task (fresh repo, externally verified) | cccodex | codex-plugin-cc |
+| Task (fresh repo, externally verified, mean of 5) | cccodex | codex-plugin-cc |
 |---|---|---|
-| T1 — one-line bugfix | 23.4 s ✅ | 16.3 s ✅ |
-| T2 — implement `slugify()` vs failing tests | 21.6 s ✅ | 15.8 s ✅ |
-| T3 — multi-file feature (store + CLI) | 21.2 s ✅ | 22.2 s ✅ |
-| Tokens per task | ~62–80 k in / 0.4–0.8 k out | ~62–80 k in / 0.4–0.9 k out |
+| T1 — one-line bugfix | 15.0 s ✅ | 15.8 s ✅ |
+| T2 — implement `slugify()` vs failing tests | 18.4 s ✅ | 19.2 s ✅ |
+| T3 — multi-file feature (store + CLI) | 21.8 s ✅ | 20.9 s ✅ |
+| Tokens per task | ~62–80 k in / 0.4–0.8 k out | ~62–80 k in / 0.4–0.8 k out |
 
-**Raw delegation performance is a wash** — same backend, equivalent results (6/6 pass), near-identical token usage, wall-clock within sampling noise (the official plugin's persistent app-server broker saves a few warm seconds; its first call pays a ~5 s broker spawn instead). What you're actually choosing between is workflow:
+**Raw delegation performance is a wash** — same backend, equivalent results (30/30 pass), near-identical token usage, wall-clock differences inside per-trial variance (the official plugin's persistent app-server broker answers a warm no-op ~1.3 s faster; its first call pays a ~5 s broker spawn instead). What you're actually choosing between is workflow:
 
 | | **cccodex** | **openai/codex-plugin-cc** |
 |---|---|---|
@@ -129,7 +129,7 @@ The official plugin wraps the persistent [Codex app server](https://developers.o
 
 - **Parallel subagents.** Each agent owns its process. A shared app-server broker serializes turns — the official broker rejects a second concurrent client with a `busy` error — which conflicts with running explorer / librarian / oracle alongside each other.
 - **Stateless failure model.** A hung or crashed call affects that one call. No daemon lifecycle (spawn, health, stale sockets, restarts) to manage.
-- **The win is small.** Measured head-to-head, a warm broker saves under a second of fixed overhead per call — noise next to model time ([docs/BENCHMARK.md](docs/BENCHMARK.md)).
+- **The win is small.** Measured head-to-head, a warm broker saves ~1.3 s of fixed overhead per call — noise next to model time ([docs/BENCHMARK.md](docs/BENCHMARK.md)).
 
 The known `codex exec` quirks (stdin hang, resume flag semantics, stall detection) are already mitigated inside the agent prompts. If long-running fixer tasks ever need first-class resume/interrupt, the candidate design is an app-server broker **per agent invocation**, not a shared one.
 

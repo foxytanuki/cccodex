@@ -22,6 +22,7 @@ COMPANION_REPO="${COMPANION_REPO:?set COMPANION_REPO to a clone of openai/codex-
 COMPANION="$COMPANION_REPO/plugins/codex/scripts/codex-companion.mjs"
 MODEL="${BENCH_MODEL:-gpt-5.5}"
 EFFORT="${BENCH_EFFORT:-medium}"
+TRIALS="${TRIALS:-1}"
 RES="$BENCH_DIR/results"
 
 [ -f "$COMPANION" ] || { echo "codex-companion.mjs not found at $COMPANION" >&2; exit 1; }
@@ -30,6 +31,27 @@ mkdir -p "$RES"
 now() { date +%s.%N; }
 verify() { ( cd "$1" && timeout 60 python3 -m unittest -q >/dev/null 2>&1 ) && echo PASS || echo FAIL; }
 diffstat() { ( cd "$1" && git diff --shortstat ); }
+
+# Kill companion brokers rooted in $BENCH_DIR and drop their per-workspace
+# state. A broker whose cwd was deleted out from under it fails every later
+# call with "failed to load configuration", so never rm -rf a fixture repo
+# while its broker is alive — reset_fixtures keeps the directory inode.
+cleanup_brokers() {
+  local p
+  for p in $(pgrep -f "app-server-broker.mjs serve .*--cwd $BENCH_DIR/" 2>/dev/null); do
+    pkill -P "$p" 2>/dev/null
+    kill "$p" 2>/dev/null
+  done
+  rm -rf "${TMPDIR:-/tmp}"/codex-companion/T[123]-b-* 2>/dev/null
+  return 0
+}
+
+reset_fixtures() { # restore committed state without recreating directories
+  local d
+  for d in "$BENCH_DIR"/T[123]-[ab]; do
+    git -C "$d" reset --hard -q && git -C "$d" clean -qfd
+  done
+}
 
 # ---------------------------------------------------------------- fixtures
 make_t1() { # buggy median(): even-length lists must average the middle pair
@@ -226,12 +248,16 @@ EOF
   git init -q && git add -A && git -c user.email=b@b -c user.name=bench commit -qm init
 }
 
-for v in a b; do
-  make_t1 "$BENCH_DIR/T1-$v"
-  make_t2 "$BENCH_DIR/T2-$v"
-  make_t3 "$BENCH_DIR/T3-$v"
-done
-cd "$BENCH_DIR"
+make_fixtures() {
+  for v in a b; do
+    make_t1 "$BENCH_DIR/T1-$v"
+    make_t2 "$BENCH_DIR/T2-$v"
+    make_t3 "$BENCH_DIR/T3-$v"
+  done
+  cd "$BENCH_DIR"
+}
+cleanup_brokers # before make_fixtures: never delete a live broker's cwd
+make_fixtures
 
 # ---------------------------------------------------------------- prompts
 # Path A gets the fixer prompt template; Path B gets the same task content
@@ -290,18 +316,27 @@ run_b() { # codex-plugin-cc rescue primitive
   local t0 t1; t0=$(now)
   ( cd "$repo" && node "$COMPANION" task --write --fresh "$(cat "$pf")" ) >"$LOG" 2>&1
   local rc=$?; t1=$(now)
-  echo "$name|B|rc=$rc|wall=$(echo "$t1 - $t0" | bc)|verify=$(verify "$repo")|diff=$(diffstat "$repo")" >> "$RES/results.txt"
+  # token usage isn't surfaced by the companion; recover it from the session rollout log
+  local tid sess tokens=""
+  tid=$(sed -n 's/.*Thread ready (\([0-9a-f-]*\)).*/\1/p' "$LOG" | head -1)
+  if [ -n "$tid" ]; then
+    sess=$(grep -rl "$tid" ~/.codex/sessions/ 2>/dev/null | head -1)
+    [ -n "$sess" ] && tokens=$(grep -o '"total_token_usage":{[^}]*}' "$sess" | tail -1)
+  fi
+  echo "$name|B|rc=$rc|wall=$(echo "$t1 - $t0" | bc)|verify=$(verify "$repo")|diff=$(diffstat "$repo")|tokens=$tokens" >> "$RES/results.txt"
 }
 
-echo "=== run start $(date -Is) model=$MODEL effort=$EFFORT ===" >> "$RES/results.txt"
+echo "=== run start $(date -Is) model=$MODEL effort=$EFFORT trials=$TRIALS ===" >> "$RES/results.txt"
 
-run_a T1 "$BENCH_DIR/T1-a" "$RES/t1a.prompt"
-run_a T2 "$BENCH_DIR/T2-a" "$RES/t2a.prompt"
-run_a T3 "$BENCH_DIR/T3-a" "$RES/t3a.prompt"
-
-run_b T1 "$BENCH_DIR/T1-b" "$RES/t1b.prompt"
-run_b T2 "$BENCH_DIR/T2-b" "$RES/t2b.prompt"
-run_b T3 "$BENCH_DIR/T3-b" "$RES/t3b.prompt"
+for t in $(seq 1 "$TRIALS"); do
+  [ "$t" -gt 1 ] && reset_fixtures
+  run_a "T1.$t" "$BENCH_DIR/T1-a" "$RES/t1a.prompt"
+  run_a "T2.$t" "$BENCH_DIR/T2-a" "$RES/t2a.prompt"
+  run_a "T3.$t" "$BENCH_DIR/T3-a" "$RES/t3a.prompt"
+  run_b "T1.$t" "$BENCH_DIR/T1-b" "$RES/t1b.prompt"
+  run_b "T2.$t" "$BENCH_DIR/T2-b" "$RES/t2b.prompt"
+  run_b "T3.$t" "$BENCH_DIR/T3-b" "$RES/t3b.prompt"
+done
 
 # ------------------------------------------- overhead microbenchmark
 TRIV="Reply with the single word OK. Do not read files, do not make any changes."
@@ -320,5 +355,6 @@ for i in 1 2 3; do
   echo "TRIV$i|B|wall=$(echo "$t1 - $t0" | bc)" >> "$RES/results.txt"
 done
 
+cleanup_brokers
 echo "=== run end $(date -Is) ===" >> "$RES/results.txt"
 echo "Results: $RES/results.txt"
