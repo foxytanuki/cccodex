@@ -123,6 +123,16 @@ OpenAI ships an official plugin for the same pairing: [openai/codex-plugin-cc](h
 
 Rule of thumb: pick **cccodex** if you want delegation to be the ambient default with a verification layer on top of everything Codex writes; pick the **official plugin** if you want explicit, on-demand Codex calls with first-class background-job management. They're not mutually exclusive — though both claim the `codex:` namespace, so expect overlapping agent lists if you install both.
 
+## Design notes: why `codex exec`, not the app server
+
+The official plugin wraps the persistent [Codex app server](https://developers.openai.com/codex/app-server); cccodex deliberately shells out to a fresh `codex exec` per task:
+
+- **Parallel subagents.** Each agent owns its process. A shared app-server broker serializes turns — the official broker rejects a second concurrent client with a `busy` error — which conflicts with running explorer / librarian / oracle alongside each other.
+- **Stateless failure model.** A hung or crashed call affects that one call. No daemon lifecycle (spawn, health, stale sockets, restarts) to manage.
+- **The win is small.** Measured head-to-head, a warm broker saves under a second of fixed overhead per call — noise next to model time ([docs/BENCHMARK.md](docs/BENCHMARK.md)).
+
+The known `codex exec` quirks (stdin hang, resume flag semantics, stall detection) are already mitigated inside the agent prompts. If long-running fixer tasks ever need first-class resume/interrupt, the candidate design is an app-server broker **per agent invocation**, not a shared one.
+
 ## Optional strict mode (not installed by the plugin)
 
 If soft routing is too soft for your taste, add to `.claude/settings.json` (or `.claude/settings.local.json` to keep it personal):
