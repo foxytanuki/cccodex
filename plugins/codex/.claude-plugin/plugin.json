@@ -1,0 +1,9 @@
+{
+  "name": "codex",
+  "version": "0.2.0",
+  "description": "Soft routing from Claude Code to Codex CLI for implementation, exploration, research, and deep review.",
+  "author": {
+    "name": "foxy"
+  },
+  "license": "MIT"
+}
