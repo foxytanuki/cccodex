@@ -22,7 +22,7 @@ def main():
         return
 
     context = """[Codex] Routing nudge
-Keep Claude Code as the interface/orchestrator. Tiny direct edits are OK. For implementation-heavy work, delegate to codex:fixer. For read-only codebase exploration, use codex:explorer. For docs/API research, use codex:librarian. For hard design/review judgment, use codex:oracle. Claude reviews, integrates, and verifies. For a pre-commit second opinion on a diff, use /codex-review."""
+Keep Claude Code as the interface/orchestrator. Tiny direct edits are OK. For implementation-heavy work, delegate to codex:fixer. For hard design/review judgment, use codex:oracle. Exploration and research stay with Claude. Claude reviews, integrates, and verifies. For a pre-commit second opinion on a diff, use /codex-review."""
 
     print(json.dumps({
         "hookSpecificOutput": {

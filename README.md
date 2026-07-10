@@ -28,11 +28,9 @@ The routing is deliberately **soft** — no denied tools, no hard pipeline. Clau
 flowchart LR
     U([You]) --> CC[Claude Code<br/><i>interface · orchestrator · reviewer</i>]
     CC -- "tiny mechanical edits" --> direct[direct Edit/Write]
-    CC -- "implementation work" --> F[codex:fixer<br/><i>write · medium effort</i>]
-    CC -- "codebase exploration" --> E[codex:explorer<br/><i>read-only · low effort</i>]
-    CC -- "docs / API research" --> L[codex:librarian<br/><i>read-only · low + live web</i>]
-    CC -- "hard design judgment" --> O[codex:oracle<br/><i>read-only · xhigh effort</i>]
-    F & E & L & O -- "codex exec" --> X[(Codex CLI<br/>gpt-5.5)]
+    CC -- "implementation work" --> F[codex:fixer<br/><i>write · max effort</i>]
+    CC -- "hard design judgment" --> O[codex:oracle<br/><i>read-only · max effort</i>]
+    F & O -- "codex exec" --> X[(Codex CLI<br/>gpt-5.6-sol)]
     F -. "diff review · scope audit · verify" .-> CC
 ```
 
@@ -42,10 +40,10 @@ flowchart LR
 
 | Agent | Use for | Codex effort | Sandbox |
 |---|---|---|---|
-| `codex:fixer` | features, refactors, multi-file changes, tests, uncertain fixes | `gpt-5.5` medium (fallback low) | workspace-write |
-| `codex:explorer` | impact analysis, file discovery, call-flow mapping | `gpt-5.5` low | read-only |
-| `codex:librarian` | docs lookup, API research, dependency behavior (live web search) | `gpt-5.5` low | read-only |
-| `codex:oracle` | design trade-offs, second opinions, risk analysis, adversarial review | `gpt-5.5` xhigh (fallback high) | read-only |
+| `codex:fixer` | features, refactors, multi-file changes, tests, uncertain fixes | `gpt-5.6-sol` max (fallback high) | workspace-write |
+| `codex:oracle` | design trade-offs, second opinions, risk analysis, adversarial review | `gpt-5.6-sol` max (fallback xhigh) | read-only |
+
+Exploration and research stay with Claude itself — earlier releases shipped `codex:explorer` and `codex:librarian` agents for those roles, but in practice Claude's own search tools cover them, so 0.3.0 removed them.
 
 `codex:fixer` is the heart of the plugin and is built as a **gatekeeper, not a forwarder**: it has no edit tools at all. It snapshots a baseline of the working tree, composes a tightly scoped prompt, delegates to `codex exec`, then audits the result — out-of-scope edits get restored from the baseline, the in-scope diff gets reviewed, and the task's verification command gets re-run — before anything is reported back.
 
@@ -123,7 +121,7 @@ OpenAI ships an official plugin for the same pairing: [openai/codex-plugin-cc](h
 |---|---|---|
 | Trigger | ambient — hooks nudge Claude to delegate on its own | explicit — `/codex:rescue`, `/codex:review` slash commands |
 | After Codex finishes | Claude **reviews the diff, audits scope, re-runs verification** | output returned **verbatim** (thin forwarder by design) |
-| Role coverage | write + 3 read-only specialists (explore / research / oracle) | task delegation + 2 review commands |
+| Role coverage | write (fixer) + read-only review (oracle) | task delegation + 2 review commands |
 | Background jobs | no | yes — status / result / cancel / resume |
 | Runtime | markdown + 3 small Python hooks | Node.js ≥ 18.18 + app-server broker |
 
@@ -133,7 +131,7 @@ Rule of thumb: pick **cccodex** if you want delegation to be the ambient default
 
 The official plugin wraps the persistent [Codex app server](https://developers.openai.com/codex/app-server); cccodex deliberately shells out to a fresh `codex exec` per task:
 
-- **Parallel subagents.** Each agent owns its process. A shared app-server broker serializes turns — the official broker rejects a second concurrent client with a `busy` error — which conflicts with running explorer / librarian / oracle alongside each other.
+- **Parallel subagents.** Each agent owns its process. A shared app-server broker serializes turns — the official broker rejects a second concurrent client with a `busy` error — which conflicts with running fixer / oracle alongside each other.
 - **Stateless failure model.** A hung or crashed call affects that one call. No daemon lifecycle (spawn, health, stale sockets, restarts) to manage.
 - **The win is small.** Measured head-to-head, a warm broker saves ~1.3 s of fixed overhead per call — noise next to model time ([docs/BENCHMARK.md](docs/BENCHMARK.md)).
 

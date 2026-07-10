@@ -15,7 +15,7 @@ You (Claude) are the gatekeeper. Codex does all reasoning-heavy and code-writing
 - High-stakes analysis/answers where a wrong confident answer is costly (use Answer mode below).
 - Any task where the user asked for "Fable-quality" output from Codex.
 
-When NOT to use: small mechanical edits (direct edit), routine well-specified implementation (codex:fixer), pure lookup (codex:librarian). The harness costs 3–4 Codex calls; spend them where rigor pays.
+When NOT to use: small mechanical edits (direct edit), routine well-specified implementation (codex:fixer), pure lookup (Claude directly). The harness costs 3–4 Codex calls; spend them where rigor pays.
 
 ## Behavior rules — embed this block VERBATIM in every Codex prompt
 
