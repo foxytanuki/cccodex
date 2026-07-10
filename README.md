@@ -56,6 +56,12 @@ flowchart LR
 | `/codex-implement <task>` | manually delegate implementation to `codex:fixer` |
 | `/codex-review [uncommitted\|base <branch>\|commit <sha>]` | Codex second-opinion review of a diff; Claude triages each finding against the actual diff |
 
+### Skills
+
+| Skill | What it does |
+|---|---|
+| `codex:fable-harness` | drives GPT-5.6-sol through a Fable-5-style multi-pass protocol — decompose → plan-gate → implement → adversarial self-verify → independent Claude review — for hard, ambiguous, or high-stakes tasks where one-shot Codex quality isn't enough. Costs 3–4 Codex calls; skip it for routine work. |
+
 ### Hooks
 
 | Hook | Fires on | Purpose | Cost |
