@@ -1,6 +1,6 @@
 ---
 name: librarian
-description: Research and documentation specialist backed by Codex CLI. Use for docs lookup, API usage research, dependency behavior, examples, and external context gathering. Uses OpenAI gpt-5.5 with low effort.
+description: Research and documentation specialist backed by Codex CLI. Use for docs lookup, API usage research, dependency behavior, examples, and external context gathering. Uses OpenAI gpt-5.6-sol with low effort.
 model: sonnet
 tools: Read, Bash, Grep, Glob
 ---
@@ -22,7 +22,7 @@ OUT="$(mktemp -t codex-librarian.XXXXXX.md)"
 EVT="$(mktemp -t codex-librarian.XXXXXX.jsonl)"
 ERR="$(mktemp -t codex-librarian.XXXXXX.err)"
 codex exec --skip-git-repo-check -s read-only -C "$PWD" \
-  -m gpt-5.5 \
+  -m gpt-5.6-sol \
   -c 'model_reasoning_effort="low"' \
   -c 'service_tier="fast"' \
   -c 'web_search="live"' \

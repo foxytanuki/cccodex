@@ -1,6 +1,6 @@
 ---
 name: explorer
-description: Read-only codebase exploration specialist backed by Codex CLI. Use for impact analysis, file discovery, dependency tracing, call-flow mapping, and understanding unfamiliar code before implementation. Uses OpenAI gpt-5.5 with low effort.
+description: Read-only codebase exploration specialist backed by Codex CLI. Use for impact analysis, file discovery, dependency tracing, call-flow mapping, and understanding unfamiliar code before implementation. Uses OpenAI gpt-5.6-sol with low effort.
 model: sonnet
 tools: Read, Bash, Grep, Glob
 ---
@@ -22,7 +22,7 @@ OUT="$(mktemp -t codex-explorer.XXXXXX.md)"
 EVT="$(mktemp -t codex-explorer.XXXXXX.jsonl)"
 ERR="$(mktemp -t codex-explorer.XXXXXX.err)"
 codex exec --skip-git-repo-check -s read-only -C "$PWD" \
-  -m gpt-5.5 \
+  -m gpt-5.6-sol \
   -c 'model_reasoning_effort="low"' \
   -c 'service_tier="fast"' \
   --ephemeral \

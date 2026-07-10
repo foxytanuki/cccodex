@@ -53,7 +53,7 @@ echo "baseline: $SNAP_DIR"
 ```
 
 3. Compose a tight Codex prompt with the goal, scope, acceptance criteria, verification command, and these constraints, stated verbatim: match surrounding style; make the smallest correct change; edit ONLY these files: `<explicit list>`; do not rewrite unrelated code; git is read-only — never run `git stash/checkout/restore/reset/clean/add/commit/rebase/merge/pull` and never restore any file toward HEAD content. Build `$PROMPT` with a quoted heredoc (`<<'CODEX_PROMPT'` ... `CODEX_PROMPT`) in the SAME Bash invocation as the `codex exec` call — shell variables do not survive across Bash tool calls, and an unset `$PROMPT` sends Codex an empty prompt. (Backticks inside a double-quoted string are command substitution that would silently mangle the verbatim git-ban sentence.)
-4. Delegate to Codex (`gpt-5.5`, medium effort). Build `$PROMPT` with a quoted heredoc in the same Bash call as `codex exec` (see step 3). Use per-run output files. If the model or effort is rejected, the rejection appears in the captured `$EVT` events file (not stderr) — retry once with `gpt-5.5` at low effort; do not retry on ordinary implementation or verification failures:
+4. Delegate to Codex (`gpt-5.6-sol`, max effort). Build `$PROMPT` with a quoted heredoc in the same Bash call as `codex exec` (see step 3). Use per-run output files. If the model or effort is rejected, the rejection appears in the captured `$EVT` events file (not stderr) — retry once with `gpt-5.6-sol` at high effort; do not retry on ordinary implementation or verification failures:
 
 ```bash
 PROMPT="$(cat <<'CODEX_PROMPT'
@@ -68,15 +68,15 @@ OUT="$(mktemp -t codex-fixer.XXXXXX.md)"
 EVT="$(mktemp -t codex-fixer.XXXXXX.jsonl)"
 ERR="$(mktemp -t codex-fixer.XXXXXX.err)"
 codex exec --skip-git-repo-check -s workspace-write -C "$PWD" \
-  -m gpt-5.5 \
-  -c 'model_reasoning_effort="medium"' \
+  -m gpt-5.6-sol \
+  -c 'model_reasoning_effort="max"' \
   -c 'service_tier="fast"' \
   --json -o "$OUT" \
   "$PROMPT" </dev/null >"$EVT" 2>"$ERR" || {
     if grep -qiE 'not supported|unknown model|invalid model|model.*not.*found|invalid_request_error|effort' "$EVT" "$ERR"; then
       codex exec --skip-git-repo-check -s workspace-write -C "$PWD" \
-        -m gpt-5.5 \
-        -c 'model_reasoning_effort="low"' \
+        -m gpt-5.6-sol \
+        -c 'model_reasoning_effort="high"' \
         -c 'service_tier="fast"' \
         --json -o "$OUT" \
         "$PROMPT" </dev/null >"$EVT" 2>"$ERR"
@@ -105,7 +105,7 @@ ERR2="$(mktemp -t codex-fixer-retry.XXXXXX.err)"
 # resume accepts no -s/-C flags: sandbox goes via -c, and it runs in the current directory.
 codex exec resume "$THREAD_ID" --skip-git-repo-check \
   -c 'sandbox_mode="workspace-write"' \
-  -c 'model_reasoning_effort="medium"' \
+  -c 'model_reasoning_effort="max"' \
   -c 'service_tier="fast"' \
   --json -o "$OUT2" \
   "$TIGHTER_FOLLOWUP" </dev/null >"$EVT2" 2>"$ERR2"
@@ -123,4 +123,4 @@ codex exec resume "$THREAD_ID" --skip-git-repo-check \
 
 ## Output
 
-Report the files changed, why they changed, the Codex command/model used (`gpt-5.5` medium effort fast tier, or fallback `gpt-5.5` low effort fast tier — state explicitly when the fallback ran), the codex thread_id, the output file path, a short diff summary, verification command output, any follow-ups, whether a stall-fallback edit spec is included for the lead to apply (say 'none' if Codex made every change), and any out-of-scope files restored from your baseline snapshot or deleted during the step-6 audit (say 'none' if the audit was clean).
+Report the files changed, why they changed, the Codex command/model used (`gpt-5.6-sol` max effort fast tier, or fallback `gpt-5.6-sol` high effort fast tier — state explicitly when the fallback ran), the codex thread_id, the output file path, a short diff summary, verification command output, any follow-ups, whether a stall-fallback edit spec is included for the lead to apply (say 'none' if Codex made every change), and any out-of-scope files restored from your baseline snapshot or deleted during the step-6 audit (say 'none' if the audit was clean).
