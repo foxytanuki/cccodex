@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 — Unreleased
+
+- Removed `codex:fable-harness`; retain two agents, two commands, and the routing/audit hooks.
+- Aligned marketplace/plugin version and role descriptions.
+- Updated CLI examples for codex-cli 0.159.2: target reviews omit incompatible trailing prompts; custom instructions route through oracle, review sandbox is explicit, and failures stop the shell block.
+- Quoted hook paths for checkout paths containing spaces.
+- Scope auditing compares task-start fingerprints, catching changes to already-dirty files and preserving raw filenames. Baseline copying includes untracked files in directories and preserves symlinks. Missing audit data is reported.
+- Removed automatic fallback/stall retries; retained logs, explicit run/thread paths, and actual model/effort for one optional corrective resume. Background jobs use Read/TaskStop; audits run after every execution and verification.
+- Normalized repository paths, reviewed changes against task-start copies, and made uncertain recovery report-only.
+- Added isolated hook regressions and documented validation limits.
+
 ## 0.3.0 — 2026-07-10
 
 - Trimmed to two agents: removed `codex:explorer` and `codex:librarian` — exploration and research stay with Claude itself; Codex is reserved for implementation (`codex:fixer`) and deep review (`codex:oracle`). Routing nudge updated to match.

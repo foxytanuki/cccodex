@@ -8,7 +8,7 @@ A Claude Code plugin that keeps Claude as the interface, orchestrator, and revie
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-plugin-d97757)](https://docs.anthropic.com/en/docs/claude-code/plugins)
-[![Codex CLI](https://img.shields.io/badge/Codex%20CLI-0.136.0-10a37f)](https://developers.openai.com/codex/cli/)
+[![Codex CLI](https://img.shields.io/badge/Codex%20CLI-0.159.2-10a37f)](https://developers.openai.com/codex/cli/)
 [![Benchmark](https://img.shields.io/badge/benchmark-30%2F30%20PASS-brightgreen)](docs/BENCHMARK.md)
 
 </div>
@@ -40,8 +40,8 @@ flowchart LR
 
 | Agent | Use for | Codex effort | Sandbox |
 |---|---|---|---|
-| `codex:fixer` | features, refactors, multi-file changes, tests, uncertain fixes | `gpt-5.6-sol` max (fallback high) | workspace-write |
-| `codex:oracle` | design trade-offs, second opinions, risk analysis, adversarial review | `gpt-5.6-sol` max (fallback xhigh) | read-only |
+| `codex:fixer` | features, refactors, multi-file changes, tests, uncertain fixes | `gpt-5.6-sol` max by default | workspace-write |
+| `codex:oracle` | design trade-offs, second opinions, risk analysis, adversarial review | `gpt-5.6-sol` max by default | read-only |
 
 Exploration and research stay with Claude itself — earlier releases shipped `codex:explorer` and `codex:librarian` agents for those roles, but in practice Claude's own search tools cover them, so 0.3.0 removed them.
 
@@ -54,19 +54,13 @@ Exploration and research stay with Claude itself — earlier releases shipped `c
 | `/codex-implement <task>` | manually delegate implementation to `codex:fixer` |
 | `/codex-review [uncommitted\|base <branch>\|commit <sha>]` | Codex second-opinion review of a diff; Claude triages each finding against the actual diff |
 
-### Skills
-
-| Skill | What it does |
-|---|---|
-| `codex:fable-harness` | drives GPT-5.6-sol through a Fable-5-style multi-pass protocol — decompose → plan-gate → implement → adversarial self-verify → independent Claude review — for hard, ambiguous, or high-stakes tasks where one-shot Codex quality isn't enough. Costs 3–4 Codex calls; skip it for routine work. |
-
 ### Hooks
 
 | Hook | Fires on | Purpose | Cost |
 |---|---|---|---|
 | routing nudge | every user prompt | reminds Claude of the routing rubric | ~18 ms |
 | post-edit nudge | every Edit/Write | flags when direct edits accumulate (~20+ lines at once, or ~60+ lines / 3+ files drip-fed) | ~21 ms |
-| scope audit | `codex:fixer` finishing | warn-only diff of `git status` against the fixer's task-start baseline; flags out-of-scope changes, never blocks | — |
+| scope audit | `codex:fixer` finishing | warn-only content/mode/link comparison against the task-start baseline; flags out-of-scope changes, never restores files | — |
 
 The routing rules live entirely inside the plugin — nothing is written to your `CLAUDE.md` or project settings.
 
@@ -89,8 +83,15 @@ For local development, register a clone's working tree instead — the install l
 ### Requirements
 
 - [Codex CLI](https://developers.openai.com/codex/cli/) installed and on `PATH`, with `codex login` completed (ChatGPT auth).
-- Tested with **codex-cli 0.136.0**. The agents depend on that release's `codex exec` flag semantics — `--json`, `-o/--output-last-message`, `-c key=value`, `-s` sandbox modes, `--skip-git-repo-check` — so on other versions, run one agent's `codex exec` command manually first to confirm the flags behave the same.
-- Python 3 (for the hooks).
+- CLI argument compatibility checked with **codex-cli 0.159.2**; earlier benchmark runs used 0.136.0. The agents depend on that release's `codex exec` flag semantics — `--json`, `-o/--output-last-message`, `-c key=value`, `-s` sandbox modes, `--skip-git-repo-check` — Model access and authenticated end-to-end delegation must still be checked on each host; on other CLI versions, confirm flag compatibility first.
+- Python 3.8+ (for the hooks and JSON event parsing).
+- Claude Code with background Bash tasks, Read, and TaskStop (documentation checked against 2.1.285).
+
+The agents default to `gpt-5.6-sol` / `max`; set `CCCODEX_MODEL` and
+`CCCODEX_EFFORT` to choose explicit alternatives. No automatic fallback occurs.
+The built-in `/codex-review` uses the host's configured review/default model.
+Fixer permits one initial run plus at most one audited corrective resume, and
+compares changes against task-start copies to distinguish them from user WIP.
 
 ## Usage
 
@@ -106,7 +107,7 @@ use codex:oracle to judge whether this migration is safe to ship
 
 ## How it compares to openai/codex-plugin-cc
 
-OpenAI ships an official plugin for the same pairing: [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc). We benchmarked the two head-to-head — 5 trials per task per plugin on identical fixture tasks, pinned to the same model/effort/tier (`gpt-5.5`, medium, fast) — full methodology, numbers, and caveats in **[docs/BENCHMARK.md](docs/BENCHMARK.md)**.
+OpenAI ships an official plugin for the same pairing: [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc). The v0.2.0 / codex-cli 0.136.0 benchmark compared the two head-to-head — 5 trials per task per plugin on identical fixture tasks, pinned to the same model/effort/tier (`gpt-5.5`, medium, fast) — full methodology, numbers, and caveats in **[docs/BENCHMARK.md](docs/BENCHMARK.md)**.
 
 | Task (fresh repo, externally verified, mean of 5) | cccodex | codex-plugin-cc |
 |---|---|---|
@@ -135,7 +136,7 @@ The official plugin wraps the persistent [Codex app server](https://developers.o
 - **Stateless failure model.** A hung or crashed call affects that one call. No daemon lifecycle (spawn, health, stale sockets, restarts) to manage.
 - **The win is small.** Measured head-to-head, a warm broker saves ~1.3 s of fixed overhead per call — noise next to model time ([docs/BENCHMARK.md](docs/BENCHMARK.md)).
 
-The known `codex exec` quirks (stdin hang, resume flag semantics, stall detection) are already mitigated inside the agent prompts. If long-running fixer tasks ever need first-class resume/interrupt, the candidate design is an app-server broker **per agent invocation**, not a shared one.
+Runs use Claude Code background Bash tasks with their own IDs and output paths. Automatic model/effort retries are disabled; every failed/cancelled delegation is audited before any further work. Agent compliance with these instructions still needs end-to-end verification. If long-running fixer tasks ever need first-class resume/interrupt, the candidate design is an app-server broker **per agent invocation**, not a shared one.
 
 ## Optional strict mode (not installed by the plugin)
 
@@ -156,9 +157,26 @@ If soft routing is too soft for your taste, add to `.claude/settings.json` (or `
 Delegating writes to a second agent in a possibly-dirty working tree is the dangerous part, so the fixer treats the tree it found at task start — not HEAD — as the canonical baseline:
 
 - **git is read-only** for every agent: `diff/show/log/status/grep/blame` only. `stash`, `checkout`, `restore`, `reset`, `clean`, and friends are banned by any means, including instructing Codex to run them.
-- **Baseline snapshots**: the fixer copies every dirty and in-scope file before delegation; that snapshot is the only sanctioned undo reference.
-- **Scope audit**: after each fixer run, a deterministic `SubagentStop` hook diffs `git status` against the baseline and warns about out-of-scope changes. Warn-only — it never blocks.
+- **Baseline snapshots**: the fixer copies every dirty and in-scope file before delegation, preserving symlinks, and fingerprints tracked/untracked files. Snapshot directories are private. A clean out-of-scope file may have a fingerprint but no copied content; if changed, report it rather than reconstructing its content from Git.
+- **Scope audit**: after each fixer run, a deterministic `SubagentStop` hook compares task-start file fingerprints with current content, permissions, symlink targets, and presence. This catches changes to already-dirty files too. It only warns and never restores files. Same-checkout concurrent runs still share a newest-manifest heuristic; submodule contents need separate verification.
 
 ## License
 
 [MIT](LICENSE)
+
+The Git/scope rules are agent instructions plus a warn-only audit, not enforced
+write isolation. Uncertain attribution is reported instead of automatically
+undoing another writer's work. Ignored files and submodule contents need separate
+verification.
+
+## Local validation
+
+```sh
+claude plugin validate plugins/codex
+python3 -m unittest discover -s tests -v
+```
+
+These checks cover the plugin manifest and isolated hook regressions, including
+already-dirty files, unusual filenames, permissions, and symlinks. They do not
+prove model access, authenticated delegation, or Claude's compliance with the
+agent prompts on another host.

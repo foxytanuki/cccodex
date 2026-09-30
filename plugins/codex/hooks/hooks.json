@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/routing-nudge.py",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/routing-nudge.py\"",
             "timeout": 5
           }
         ]
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/post-edit-nudge.py",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/post-edit-nudge.py\"",
             "timeout": 5
           }
         ]
@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/subagent-scope-audit.py",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/subagent-scope-audit.py\"",
             "timeout": 10
           }
         ]
