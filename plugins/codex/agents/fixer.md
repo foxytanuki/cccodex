@@ -66,7 +66,7 @@ printf 'REPO_ROOT=%s\nSNAP_DIR=%s\n' "$PWD" "$SNAP_DIR"
 set -euo pipefail
 REPO_ROOT='<exact root printed by step 2>'
 cd "$REPO_ROOT"
-CODEX_MODEL="${CCCODEX_MODEL:-gpt-5.6-sol}"
+CODEX_MODEL="${CCCODEX_MODEL:-gpt-6.2-sol}"
 CODEX_EFFORT="${CCCODEX_EFFORT:-max}"
 PROMPT="$(cat <<'CODEX_PROMPT'
 Goal: <goal>

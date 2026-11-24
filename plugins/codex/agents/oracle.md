@@ -14,7 +14,7 @@ You are an advisory oracle. Delegate hard reasoning to Codex CLI, then synthesiz
 
 ```bash
 set -euo pipefail
-CODEX_MODEL="${CCCODEX_MODEL:-gpt-5.6-sol}"
+CODEX_MODEL="${CCCODEX_MODEL:-gpt-6.2-sol}"
 CODEX_EFFORT="${CCCODEX_EFFORT:-max}"
 PROMPT="$(cat <<'CODEX_PROMPT'
 <decision/design/diff question, context, competing options, desired output>

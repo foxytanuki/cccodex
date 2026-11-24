@@ -30,7 +30,7 @@ flowchart LR
     CC -- "tiny mechanical edits" --> direct[direct Edit/Write]
     CC -- "implementation work" --> F[codex:fixer<br/><i>write · max effort</i>]
     CC -- "hard design judgment" --> O[codex:oracle<br/><i>read-only · max effort</i>]
-    F & O -- "codex exec" --> X[(Codex CLI<br/>gpt-5.6-sol)]
+    F & O -- "codex exec" --> X[(Codex CLI<br/>gpt-6.2-sol)]
     F -. "diff review · scope audit · verify" .-> CC
 ```
 
@@ -40,8 +40,8 @@ flowchart LR
 
 | Agent | Use for | Codex effort | Sandbox |
 |---|---|---|---|
-| `codex:fixer` | features, refactors, multi-file changes, tests, uncertain fixes | `gpt-5.6-sol` max by default | workspace-write |
-| `codex:oracle` | design trade-offs, second opinions, risk analysis, adversarial review | `gpt-5.6-sol` max by default | read-only |
+| `codex:fixer` | features, refactors, multi-file changes, tests, uncertain fixes | `gpt-6.2-sol` max by default | workspace-write |
+| `codex:oracle` | design trade-offs, second opinions, risk analysis, adversarial review | `gpt-6.2-sol` max by default | read-only |
 
 Exploration and research stay with Claude itself — earlier releases shipped `codex:explorer` and `codex:librarian` agents for those roles, but in practice Claude's own search tools cover them, so 0.3.0 removed them.
 
@@ -87,7 +87,7 @@ For local development, register a clone's working tree instead — the install l
 - Python 3.8+ (for the hooks and JSON event parsing).
 - Claude Code with background Bash tasks, Read, and TaskStop (documentation checked against 2.1.285).
 
-The agents default to `gpt-5.6-sol` / `max`; set `CCCODEX_MODEL` and
+The agents default to `gpt-6.2-sol` / `max`; set `CCCODEX_MODEL` and
 `CCCODEX_EFFORT` to choose explicit alternatives. No automatic fallback occurs.
 The built-in `/codex-review` uses the host's configured review/default model.
 Fixer permits one initial run plus at most one audited corrective resume, and
