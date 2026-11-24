@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1 — Unreleased
+
+- Updated the default Codex model for oracle and fixer to `gpt-6.2-sol`.
+
 ## 0.4.0 — Unreleased
 
 - Removed `codex:fable-harness`; retain two agents, two commands, and the routing/audit hooks.
