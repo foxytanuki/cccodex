@@ -1,4 +1,4 @@
-"""Isolated regressions for hook routing and task-start scope preservation."""
+"""Isolated regressions for task-start scope preservation."""
 import importlib.util
 import json
 import os
@@ -109,20 +109,6 @@ class ScopeAuditTests(unittest.TestCase):
         after = audit.fingerprints(self.repo, ['deleted.txt'])
         self.assertEqual(before['deleted.txt'], 'absent')
         self.assertNotEqual(before['deleted.txt'], after['deleted.txt'])
-
-
-class RoutingTests(unittest.TestCase):
-    def test_slash_command_skips_nudge(self):
-        result = subprocess.run([sys.executable, str(HOOKS / 'routing-nudge.py')],
-                                input=json.dumps({'prompt': '/codex-review'}),
-                                capture_output=True, text=True, check=True)
-        self.assertEqual(result.stdout, '')
-
-    def test_implementation_prompt_gets_routing_context(self):
-        result = subprocess.run([sys.executable, str(HOOKS / 'routing-nudge.py')],
-                                input=json.dumps({'prompt': 'Implement a feature'}),
-                                capture_output=True, text=True, check=True)
-        self.assertIn('codex:fixer', json.loads(result.stdout)['hookSpecificOutput']['additionalContext'])
 
 
 if __name__ == '__main__':

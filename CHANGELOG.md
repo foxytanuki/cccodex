@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.2 — Unreleased
+
+- Removed the routing nudge (`UserPromptSubmit`) and post-edit nudge (`PostToolUse`) hooks and their regression tests. Claude is no longer steered toward `codex:fixer`; delegate explicitly instead. The fixer scope audit stays.
+- Restored the `codex:fable-harness` skill (removed in 0.4.0), updated to `gpt-6.2-sol`.
+- Dropped the "ignore routing nudges" note from `/codex-implement`.
+
 ## 0.4.1 — Unreleased
 
 - Updated the default Codex model for oracle and fixer to `gpt-6.2-sol`.

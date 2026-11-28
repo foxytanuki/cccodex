@@ -22,7 +22,7 @@ Two agentic CLIs, two subscriptions, one keyboard. Instead of alt-tabbing betwee
 - **Claude** owns the conversation: spec clarity, task decomposition, diff review, verification, judgment.
 - **Codex** owns the keystrokes: feature work, refactors, multi-file changes, tests.
 
-The routing is deliberately **soft** — no denied tools, no hard pipeline. Claude can still make tiny direct edits; gentle hooks nudge it to delegate when a change grows into real implementation work. And everything Codex produces gets **reviewed and verified by Claude before it reaches you**.
+The routing is deliberately **soft** — no denied tools, no hard pipeline. Delegation is explicit: call `codex:fixer`, `codex:oracle`, or `/codex-review` when you want Codex. And everything Codex produces gets **reviewed and verified by Claude before it reaches you**.
 
 ```mermaid
 flowchart LR
@@ -54,12 +54,16 @@ Exploration and research stay with Claude itself — earlier releases shipped `c
 | `/codex-implement <task>` | manually delegate implementation to `codex:fixer` |
 | `/codex-review [uncommitted\|base <branch>\|commit <sha>]` | Codex second-opinion review of a diff; Claude triages each finding against the actual diff |
 
+### Skills
+
+| Skill | What it does |
+|---|---|
+| `codex:fable-harness` | drives `gpt-6.2-sol` through a Fable-5-style multi-pass protocol — decompose → plan-gate → implement → adversarial self-verify → independent Claude review — for hard, ambiguous, or high-stakes tasks where one-shot Codex quality isn't enough. Costs 3–4 Codex calls; skip it for routine work. |
+
 ### Hooks
 
 | Hook | Fires on | Purpose | Cost |
 |---|---|---|---|
-| routing nudge | every user prompt | reminds Claude of the routing rubric | ~18 ms |
-| post-edit nudge | every Edit/Write | flags when direct edits accumulate (~20+ lines at once, or ~60+ lines / 3+ files drip-fed) | ~21 ms |
 | scope audit | `codex:fixer` finishing | warn-only content/mode/link comparison against the task-start baseline; flags out-of-scope changes, never restores files | — |
 
 The routing rules live entirely inside the plugin — nothing is written to your `CLAUDE.md` or project settings.
@@ -97,7 +101,7 @@ compares changes against task-start copies to distinguish them from user WIP.
 
 Use Claude Code normally. That's the point.
 
-For small obvious edits, Claude proceeds directly. When a task becomes implementation-heavy, Claude spawns `codex:fixer` on its own (the hooks keep it honest). You can also route explicitly:
+For small obvious edits, Claude proceeds directly. Delegation to Codex is explicit — ask for an agent or use a command:
 
 ```text
 /codex-implement add retry with exponential backoff to the fetch client
@@ -120,13 +124,13 @@ OpenAI ships an official plugin for the same pairing: [openai/codex-plugin-cc](h
 
 | | **cccodex** | **openai/codex-plugin-cc** |
 |---|---|---|
-| Trigger | ambient — hooks nudge Claude to delegate on its own | explicit — `/codex:rescue`, `/codex:review` slash commands |
+| Trigger | explicit — agents and `/codex-review` | explicit — `/codex:rescue`, `/codex:review` slash commands |
 | After Codex finishes | Claude **reviews the diff, audits scope, re-runs verification** | output returned **verbatim** (thin forwarder by design) |
-| Role coverage | write (fixer) + read-only review (oracle) | task delegation + 2 review commands |
+| Role coverage | write (fixer) + read-only review (oracle) + multi-pass skill (fable-harness) | task delegation + 2 review commands |
 | Background jobs | no | yes — status / result / cancel / resume |
-| Runtime | markdown + 3 small Python hooks | Node.js ≥ 18.18 + app-server broker |
+| Runtime | markdown + 1 small Python hook | Node.js ≥ 18.18 + app-server broker |
 
-Rule of thumb: pick **cccodex** if you want delegation to be the ambient default with a verification layer on top of everything Codex writes; pick the **official plugin** if you want explicit, on-demand Codex calls with first-class background-job management. They're not mutually exclusive — though both claim the `codex:` namespace, so expect overlapping agent lists if you install both.
+Rule of thumb: pick **cccodex** if you want a verification layer on top of everything Codex writes; pick the **official plugin** if you want a thin forwarder with first-class background-job management. They're not mutually exclusive — though both claim the `codex:` namespace, so expect overlapping agent lists if you install both.
 
 ## Design notes: why `codex exec`, not the app server
 

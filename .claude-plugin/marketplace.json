@@ -12,7 +12,7 @@
       "name": "codex",
       "source": "./plugins/codex",
       "description": "Soft routing from Claude Code to Codex CLI for implementation and deep review.",
-      "version": "0.4.1",
+      "version": "0.4.2",
       "author": {
         "name": "foxytanuki"
       },
